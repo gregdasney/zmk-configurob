@@ -1,7 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Building firmware..."
+echo "Building firmware...";
+
+# Run pre-build script to copy overlay files
+if [ -f "dockerScripts/pre-build.sh" ]; then
+    bash dockerScripts/pre-build.sh
+fi
 
 # Build Corne left
 west build -s zmk/app -d .build/corne_left -b nice_nano//zmk -- \
