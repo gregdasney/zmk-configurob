@@ -1,0 +1,34 @@
+// hrm.dtsi - HRM behaviors matching urob's MAKE_HRM macro
+// Include this BEFORE base.keymap
+
+/ {
+    behaviors {
+        // Left-hand HRMs (hold: left mods, tap: keys)
+        // Trigger positions: right-hand keys + thumbs
+        hml: hml {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+            flavor = "balanced";
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;  // QUICK_TAP_MS = 175
+            require-prior-idle-ms = <150>;
+            hold-trigger-on-release;
+            hold-trigger-key-positions = <KEYS_R THUMBS>;
+        };
+
+        // Right-hand HRMs (hold: right mods, tap: keys)
+        // Trigger positions: left-hand keys + thumbs
+        hmr: hmr {
+            compatible = "zmk,behavior-hold-tap";
+            #binding-cells = <2>;
+            bindings = <&kp>, <&kp>;
+            flavor = "balanced";
+            tapping-term-ms = <280>;
+            quick-tap-ms = <175>;  // QUICK_TAP_MS = 175
+            require-prior-idle-ms = <150>;
+            hold-trigger-on-release;
+            hold-trigger-key-positions = <KEYS_L THUMBS>;
+        };
+    };
+};

@@ -1,0 +1,9 @@
+zmk/
+nix/
+optional/
+zephyr/
+.west/
+.direnv/
+.build/
+firmware/
+modules/
