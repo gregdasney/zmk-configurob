@@ -11,16 +11,16 @@ docker run --rm \
   "$DOCKER_IMAGE" \
   bash -c "
     set -euo pipefail
-    git config --global --add safe.directory '*'
+    # git config --global --add safe.directory '*'
     
-    # Clean everything for a fresh start
-    echo 'Cleaning workspace for fresh build...'
-    rm -rf .west zmk zephyr modules .build
+    # # Clean everything for a fresh start
+    # echo 'Cleaning workspace for fresh build...'
+    # rm -rf .west zmk zephyr modules .build
     
-    echo 'Initializing west workspace...'
-    west init -l config
-    west update --fetch-opt=--filter=blob:none
-    west zephyr-export
+    # echo 'Initializing west workspace...'
+    # west init -l config
+    # west update --fetch-opt=--filter=blob:none
+    # west zephyr-export
     
     # Run build script
     bash dockerScripts/build-firmware.sh
