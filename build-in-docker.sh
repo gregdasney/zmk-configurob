@@ -6,6 +6,7 @@ DOCKER_IMAGE="zmk-configurob-baked"
 
 echo "Building firmware in Docker container..."
 docker run --rm \
+ --user "1000:1000" \
   -v "$SCRIPT_DIR":/workspace \
   -w /workspace \
   "$DOCKER_IMAGE" \
