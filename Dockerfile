@@ -37,3 +37,4 @@ RUN dockerScripts/build-firmware.sh
 
 # Default command: copy baked workspace to /workspace and build
 # ENTRYPOINT ["/usr/local/bin/build-firmware.sh"]
+# docker build . -t zmkthing && docker run --rm -v ./:/firmware zmkthing cp  -r firmware /firmware
