@@ -26,6 +26,8 @@ manifest:
       url-base: https://github.com/urob
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
 
   projects:
     - name: zmk
@@ -55,6 +57,11 @@ manifest:
 
     # Only source necessary Zephyr modules. Remove this entire section to restore
     # the default (needed for less common hardware).
+    # ZMK dependencies required for Kconfig and BLE Studio
+    - name: nanopb
+      path: modules/nanopb
+      remote: zephyrproject-rtos
+      revision: master
     - name: zephyr
       remote: zmkfirmware
       revision: 58a5874a446ace2893a196848282d271a551e512 # v4.1.0+zmk-fixes
