@@ -1,0 +1,28 @@
+# --- Stage 1: ZMK build for firmware & processed device tree ---
+FROM zmkfirmware/zmk-dev-arm:stable
+
+WORKDIR /workspace
+
+# Copy ZMK west manifest, build scripts, configs, and overlays
+COPY build.yaml build.yaml
+COPY config/west.yml config/west.yml
+COPY dockerScripts/build-firmware.sh dockerScripts/build-firmware.sh
+COPY dockerScripts/entrypoint.sh dockerScripts/entrypoint.sh
+COPY dockerScripts/pre-build.sh dockerScripts/pre-build.sh
+COPY dockerScripts/overlays/ dockerScripts/overlays/
+COPY config/west.yml config/west.yml
+
+RUN chmod +x dockerScripts/*.sh
+
+# Zephyr expects a "safe" workspace
+RUN git config --global --add safe.directory '*'
+
+# Init west workspace, update deps, and export Zephyr
+RUN west init -l config && \
+    west update --fetch-opt=--filter=blob:none && \
+    west zephyr-export
+
+COPY config/ config/
+
+# Build firmware and device tree with local script
+RUN dockerScripts/build-firmware.sh && rm -rf /workspace/config

@@ -35,5 +35,15 @@ elif [ -f .build/corne_right/zephyr/zmk.bin ]; then
     echo "Built firmware/corne_right.bin"
 fi;
 
-echo "Build complete! Firmware files are in /workspace/firmware/"
+# Also export DTS for keymap-drawer
+if [ -f .build/corne_left/zephyr/zephyr.dts ]; then
+    cp .build/corne_left/zephyr/zephyr.dts firmware/zephyr_left.dts
+    echo "Copied .build/corne_left/zephyr/zephyr.dts to firmware/zephyr_left.dts"
+fi
+if [ -f .build/corne_right/zephyr/zephyr.dts ]; then
+    cp .build/corne_right/zephyr/zephyr.dts firmware/zephyr_right.dts
+    echo "Copied .build/corne_right/zephyr/zephyr.dts to firmware/zephyr_right.dts"
+fi
+
+echo "Build complete! Firmware and DTS files are in /workspace/firmware/"
 ls -la firmware/

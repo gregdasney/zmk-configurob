@@ -1,0 +1,31 @@
+version: '3.9'
+services:
+  firmware:
+    build:
+      context: .
+      dockerfile: Dockerfile.firmware
+    image: zmk-firmware:latest
+    volumes:
+      - ./firmware:/firmware
+    command: ["/bin/bash", "-c", "cp -r /workspace/firmware/* /firmware/"]
+    restart: "no"
+    # Place any necessary environment/setup vars here
+
+
+  draw:
+    build:
+      context: .
+      dockerfile: Dockerfile.draw
+    depends_on:
+      - firmware
+    image: corne-draw:latest
+    working_dir: /workspace
+    command: ["bash", "/workspace/dockerScripts/draw-and-export.sh"]
+    restart: "no"
+    volumes:
+      - ./drawings:/workspace/drawings
+      - ./firmware:/workspace/firmware
+      - ./config:/workspace/config
+      - ./draw:/workspace/draw
+      - ./dockerScripts:/workspace/dockerScripts
+

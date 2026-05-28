@@ -1,0 +1,19 @@
+FROM python:3.12-slim
+
+# Install helpers and keymap-drawer
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends jq yq sed git && \
+    rm -rf /var/lib/apt/lists/*
+RUN pip install --upgrade pip && \
+    pip install keymap-drawer
+
+WORKDIR /workspace
+
+# Firmware, DTS and configs must be provided in the build context or volume
+COPY draw/ ./draw
+COPY dockerScripts/ dockerScripts/
+
+RUN mkdir -p /workspace/drawings
+
+# Run draw-and-export.sh, expects artifacts to already be present
+CMD ["bash", "/workspace/dockerScripts/draw-and-export.sh"]
