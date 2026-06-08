@@ -25,4 +25,4 @@ RUN west init -l config && \
 COPY config/ config/
 
 # Build firmware and device tree with local script
-RUN dockerScripts/build-firmware.sh && rm -rf /workspace/config
+RUN dockerScripts/build-firmware.sh 
