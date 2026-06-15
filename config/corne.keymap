@@ -1,4 +1,7 @@
 // corne.keymap - Personal layout using urob's infrastructure
+// HYPER(keycode): Sends Ctrl+Shift+Alt+GUI + keycode ("Hyper" modifier combo, system-wide unique hotkey)
+#define HYPER(keycode) &kp LC(LS(LA(LG(keycode))))
+
 // Key position macros for combos (42-key layout)
 #include "zmk-helpers/key-labels/42.h"
 
@@ -45,9 +48,9 @@ PERSONAL_LAYER(nav,
 // ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
          XXX          XXX           XXX           &kp UP         XXX           XXX      ,      XXX        &mkp MB4      &kp PG_UP     &mkp MB5      &kp C_VOL_UP  &kp C_VOL_DN    ,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-         XXX         &kp LCTRL     &kp LEFT       &kp DOWN     &kp RIGHT       XXX      ,      XXX         &kp HOME     &kp PG_DN      &kp END         XXX          &kp C_PP     ,
+         XXX          XXX      &kp LEFT       &kp DOWN     &kp RIGHT       XXX      ,      XXX         &kp HOME     &kp PG_DN      &kp END         XXX          &kp C_PP     ,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-         XXX         &kp LSHFT        XXX           XXX           XXX          XXX      ,      XXX           XXX           XXX           XXX           XXX           XXX         ,
+        &kp LCTRL          &kp LSHFT        XXX           XXX           XXX          XXX      ,      XXX           XXX           XXX           XXX           XXX           XXX         ,
 // ╰─────────────┼─────────────┴─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┴─────────────┴─────────────╯
                                                 XXX             XXX         &mo SYM      ,      XXX           XXX           XXX
 //                                           ╰─────────────┴─────────────┴─────────────╯ ╰─────────────┴─────────────┴─────────────╯
@@ -60,7 +63,7 @@ PERSONAL_LAYER(Num,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
          XXX         &kp N0        &kp N4         &kp N5         &kp N6      &kp EQUAL   ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-     XXX   &kp LSHFT          &kp N1        &kp N2         &kp N3     XXX         ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
+     &kp LCTRL   &kp LSHFT          &kp N1        &kp N2         &kp N3     XXX         ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
 // ╰─────────────┼─────────────┴─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┴─────────────┴─────────────╯
                                                   XXX          &mo SYM    XXX                  ,    XXX           XXX           XXX
 //                                           ╰─────────────┴─────────────┴─────────────╯ ╰─────────────┴─────────────┴─────────────╯
@@ -80,11 +83,11 @@ PERSONAL_LAYER(Sym,
 
 PERSONAL_LAYER(Macro,
 // ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
-          &kp M       XXX           &kp F19       &kp F20       &kp F21        XXX      ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
+          &kp M       XXX           &kp F19       &kp F20       HYPER(A)        XXX      ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-         XXX          XXX           &kp F16       &kp F17       &kp F18        XXX      ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
+         XXX          XXX           &kp F16       &kp F17       &kp F18        XXX      ,     HYPER(2)           XXX           XXX           XXX           XXX           XXX             ,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-         XXX           XXX          &kp F13       &kp F14       &kp F15        XXX      ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
+         XXX           XXX          &kp F13       &kp F14       &kp F15        XXX      ,     HYPER(Q)           XXX           XXX           XXX           XXX           XXX             ,
 // ╰─────────────┼─────────────┴─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┴─────────────┴─────────────╯
                                                   XXX           XXX            XXX      ,     XXX           XXX           XXX
 //                                           ╰─────────────┴─────────────┴─────────────╯ ╰─────────────┴─────────────┴─────────────╯
@@ -141,6 +144,12 @@ PERSONAL_LAYER(Blue,
 
 
 
+
+// Example Hyper mapping usage:
+//  HYPER(1): Ctrl+Shift+Alt+GUI+1
+//  HYPER(2): Ctrl+Shift+Alt+GUI+2
+//  HYPER(Q): Ctrl+Shift+Alt+GUI+Q
+// For other keys, use as HYPER(<KEYCODE>)
 
 // PERSONAL_LAYER(blue,
     
