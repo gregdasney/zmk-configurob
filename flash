@@ -1,0 +1,166 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MAP_FILE="$SCRIPT_DIR/.flash-map"
+
+usage() {
+    echo "usage: $0 [<left|right>]" >&2
+    echo "       Flashes corne firmware to attached nice!nano(s) in bootloader mode." >&2
+    echo "       With no argument, the side(s) are auto-detected from a mapping file" >&2
+    echo "       ($MAP_FILE) keyed by each board's unique USB serial." >&2
+    exit 2
+}
+
+side="${1:-}"
+case "$side" in
+    "" | left | right) ;;
+    *) usage ;;
+esac
+
+find_volumes() {
+    shopt -s nullglob
+    volumes=()
+    for info in /Volumes/*/INFO_UF2.TXT; do
+        if grep -qi 'nicenano' "$info"; then
+            volumes+=("$(dirname "$info")")
+        fi
+    done
+    shopt -u nullglob
+}
+
+side_for_serial() {
+    [[ -f "$MAP_FILE" ]] || return 0
+    grep "^$1 " "$MAP_FILE" | awk '{print $2}' | head -1
+}
+
+# Print the USB serial of the device backing a mountpoint, via the IORegistry
+# IOUSB tree (serial lives on the USB host device, BSD disk name on IOMedia below it).
+serial_of() {
+    local mountpoint="$1"
+    python3 - "$mountpoint" <<'PY'
+import re
+import subprocess
+import sys
+
+mountpoint = sys.argv[1]
+
+disk = None
+for line in subprocess.run(["mount"], capture_output=True, text=True).stdout.splitlines():
+    m = re.match(r"^(\S+)\s+on\s+(.*?)\s+\(\w", line)
+    if m and m.group(2) == mountpoint:
+        disk = m.group(1).removeprefix("/dev/")
+        break
+if not disk:
+    sys.exit(1)
+
+out = subprocess.run(
+    ["ioreg", "-r", "-l", "-w0", "-c", "IOUSBHostDevice"],
+    capture_output=True, text=True).stdout
+
+cur_serial = None
+found = None
+for line in out.splitlines():
+    if line.startswith("+-o"):
+        cur_serial = None
+    m = re.search(r'"USB Serial Number" = "([^"]*)"', line)
+    if m:
+        cur_serial = m.group(1)
+    m = re.search(r'"BSD Name" = "([^"]*)"', line)
+    if m and m.group(1) == disk:
+        found = cur_serial
+if not found:
+    sys.exit(1)
+print(found)
+PY
+}
+
+find_volumes
+if [[ "${#volumes[@]}" -eq 0 ]]; then
+    echo "error: no nice!nano in bootloader mode found." >&2
+    echo "       Double-tap reset on the board to enter the UF2 bootloader." >&2
+    exit 1
+fi
+
+# Read each volume's USB serial once.
+serials=()
+for v in "${volumes[@]}"; do
+    serials+=("$(serial_of "$v" || true)")
+done
+
+# Decide which side goes to which volume.
+sides=()
+if [[ -n "$side" ]]; then
+    if [[ "${#volumes[@]}" -eq 1 ]]; then
+        sides+=("$side")
+    else
+        match=-1
+        for i in "${!volumes[@]}"; do
+            s="${serials[$i]}"
+            [[ -n "$s" ]] && [[ "$(side_for_serial "$s")" == "$side" ]] && match=$i
+        done
+        if [[ "$match" -eq -1 ]]; then
+            echo "error: cannot tell which attached board is ${side} (not in $MAP_FILE)." >&2
+            echo "       Identify it once: attach only that board and run: $0 ${side}" >&2
+            exit 1
+        fi
+        for i in "${!volumes[@]}"; do
+            [[ "$i" -eq "$match" ]] && sides+=("$side") || sides+=("")
+        done
+    fi
+else
+    for i in "${!volumes[@]}"; do
+        s="${serials[$i]}"
+        if [[ -z "$s" ]]; then
+            echo "error: could not read the USB serial of ${volumes[$i]}" >&2
+            exit 1
+        fi
+        detected="$(side_for_serial "$s")"
+        if [[ -z "$detected" ]]; then
+            echo "error: board ${volumes[$i]} (serial $s) is not in $MAP_FILE." >&2
+            echo "       Identify it once: attach only this board and run: $0 <left|right>" >&2
+            exit 1
+        fi
+        sides+=("$detected")
+    done
+    if [[ "${#volumes[@]}" -eq 1 ]]; then
+        echo "Auto-detected: corne_${sides[0]}"
+    fi
+fi
+
+# Flash each volume.
+for i in "${!volumes[@]}"; do
+    [[ -n "${sides[$i]}" ]] || continue
+    v="${volumes[$i]}"
+    s="${serials[$i]}"
+    side="${sides[$i]}"
+    uf2="$SCRIPT_DIR/firmware/corne_${side}.uf2"
+    if [[ ! -f "$uf2" ]]; then
+        echo "error: firmware not found: $uf2 (run the build first)" >&2
+        exit 1
+    fi
+
+    echo "Flashing $(basename "$uf2") -> $v"
+    if ! cp "$uf2" "$v/"; then
+        echo "warning: copy returned non-zero (board may have reset during write)" >&2
+    fi
+    sync
+
+    # The bootloader flashes and disconnects the volume on a successful write.
+    for _ in {1..10}; do
+        [[ ! -e "$v/INFO_UF2.TXT" ]] && break
+        sleep 0.5
+    done
+    if [[ ! -e "$v/INFO_UF2.TXT" ]]; then
+        echo "Done. Board $v should now be running corne_${side}."
+        if [[ -n "$s" ]]; then
+            grep -v "^$s " "$MAP_FILE" > "$MAP_FILE.tmp" 2>/dev/null || true
+            echo "$s $side" >> "$MAP_FILE.tmp"
+            mv "$MAP_FILE.tmp" "$MAP_FILE"
+            echo "Recorded: serial $s -> $side"
+        fi
+    else
+        echo "error: volume $v still mounted; board did not reset. Retry the copy." >&2
+        exit 1
+    fi
+done

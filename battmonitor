@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""battmonitor - monitor Corne battery levels via the left (central) half's USB debug terminal.
+
+The left half is plugged into USB running a zmk-usb-logging build. ZMK logs the
+right (peripheral) half's battery as "[BATTERY LEVEL NOTIFICATION] ... Battery level: N"
+and its own as "Setting BAS GATT battery level to N." -- but only when a level CHANGES.
+
+This script tails the serial port, records every battery event for both halves, and
+prints a timestamped status line every <interval> seconds using last-known values.
+
+Usage:
+  battmonitor [tty] [interval]
+    tty       serial device of the left half (default: auto-detected)
+    interval  status line interval in seconds (default: 600)
+  env BATTLOG  append an ISO-timestamped copy of every event/status to this file
+"""
+
+import os
+import re
+import select
+import subprocess
+import sys
+import termios
+import time
+from datetime import datetime
+
+INTERVAL = int(sys.argv[2]) if len(sys.argv) > 2 else 600
+LOG_FILE = os.environ.get("BATTLOG", "")
+INTERVAL = max(1, INTERVAL)
+
+RIGHT_RE = re.compile(r"BATTERY LEVEL NOTIFICATION.*Battery level: (\d+)")
+LEFT_RE = re.compile(r"Setting BAS GATT battery level to (\d+)\.")
+STATUS_RE = re.compile(r"battery", re.IGNORECASE)
+
+
+def find_left_serial():
+    """Return the USB serial of the left (central) half from the .flash-map file."""
+    import glob
+
+    map_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".flash-map")
+    try:
+        with open(map_file) as fh:
+            for line in fh:
+                parts = line.split()
+                if len(parts) == 2 and parts[1] == "left":
+                    return parts[0]
+    except FileNotFoundError:
+        pass
+    return None
+
+
+def tty_serials():
+    """Map each /dev/cu.usbmodem* tty to its board's USB serial via IORegistry."""
+    import glob
+
+    out = subprocess.run(
+        ["ioreg", "-r", "-l", "-w0", "-c", "IOUSBHostDevice"],
+        capture_output=True, text=True).stdout
+    dev_serial = {}
+    cur = None
+    for line in out.splitlines():
+        m = re.search(r"@([0-9A-Fa-f]{8})\s+<class IOUSBHostDevice", line)
+        if m:
+            cur = m.group(1).upper()
+            continue
+        m = re.search(r'"USB Serial Number" = "([^"]+)"', line)
+        if m and cur:
+            dev_serial.setdefault(cur, m.group(1))
+
+    result = {}
+    for t in glob.glob("/dev/cu.usbmodem*"):
+        m = re.search(r"usbmodem(\d+)", t)
+        if not m:
+            continue
+        addr = "00" + m.group(1)[:6]
+        result[t] = dev_serial.get(addr)
+    return result
+
+
+def find_tty():
+    """Return the left/central USB logging tty, preferring the port that emits ZMK logs."""
+    import glob
+
+    left_serial = find_left_serial()
+    candidates = []
+    for t, serial in tty_serials().items():
+        if left_serial and serial == left_serial:
+            candidates.append(t)
+    if not candidates:
+        candidates = list(glob.glob("/dev/cu.usbmodem*"))
+    if not candidates:
+        return None
+
+    # Prefer the port that streams ZMK log markers; fall back to the first.
+    best = candidates[0]
+    for t in candidates:
+        try:
+            fd = os.open(t, os.O_RDWR | os.O_NOCTTY)
+        except OSError:
+            continue
+        try:
+            attrs = termios.tcgetattr(fd)
+            attrs[0] = 0
+            attrs[1] = 0
+            attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
+            attrs[3] = 0
+            termios.tcsetattr(fd, termios.TCSANOW, attrs)
+            end = time.time() + 3
+            buf = b""
+            while time.time() < end:
+                r, _, _ = select.select([fd], [], [], 0.2)
+                if fd in r:
+                    try:
+                        chunk = os.read(fd, 4096)
+                        if chunk:
+                            buf += chunk
+                    except BlockingIOError:
+                        pass
+            if b"BATTERY" in buf or b"split_central" in buf or b"zmk:" in buf:
+                best = t
+                break
+        finally:
+            os.close(fd)
+    return best
+
+
+def log_line(msg):
+    line = f"{datetime.now():%H:%M:%S} {msg}"
+    print(line, flush=True)
+    if LOG_FILE:
+        with open(LOG_FILE, "a") as fh:
+            fh.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} {msg}\n")
+
+
+def main():
+    tty = sys.argv[1] if len(sys.argv) > 1 else ""
+    if not tty:
+        tty = find_tty()
+    if not tty:
+        print("error: no left-half USB logging tty found. Is it plugged in?", file=sys.stderr)
+        return 1
+
+    fd = os.open(tty, os.O_RDWR | os.O_NOCTTY)
+    attrs = termios.tcgetattr(fd)
+    attrs[0] = 0
+    attrs[1] = 0
+    attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
+    attrs[3] = 0
+    termios.tcsetattr(fd, termios.TCSANOW, attrs)
+
+    print(f"monitoring {tty} (interval {INTERVAL}s; Ctrl-C to stop)", flush=True)
+
+    left, right = "?", "?"
+    last_status = 0
+    buf = b""
+    try:
+        while True:
+            r, _, _ = select.select([fd], [], [], 0.25)
+            if fd in r:
+                try:
+                    chunk = os.read(fd, 4096)
+                except BlockingIOError:
+                    chunk = b""
+                if not chunk:
+                    continue
+                buf += chunk
+                while b"\n" in buf:
+                    raw, buf = buf.split(b"\n", 1)
+                    try:
+                        line = raw.decode("utf-8", "replace")
+                    except Exception:
+                        continue
+
+                    m = RIGHT_RE.search(line)
+                    if m:
+                        right = m.group(1)
+                        log_line(f"right(peripheral) battery: {right}%")
+                        continue
+                    m = LEFT_RE.search(line)
+                    if m:
+                        left = m.group(1)
+                        log_line(f"left(central) battery:    {left}%")
+                        continue
+
+            now = int(time.time())
+            if now - last_status >= INTERVAL:
+                last_status = now
+                log_line(f"status: left={left}% right={right}%")
+    except KeyboardInterrupt:
+        log_line("stopping")
+        return 0
+    finally:
+        os.close(fd)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

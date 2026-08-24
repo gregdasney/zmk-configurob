@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""battreport - parse serialtap's battery log into per-half readings.
+
+Reads the battery-filtered log written by serialtap and prints a timeline of
+left (central) and right (peripheral) half battery levels.
+
+Line formats parsed:
+  <wall-clock> ... vddh_sample_fetch: ADC raw N ~ N mV => N%      -> left
+  <wall-clock> ... Battery level: N                               -> right
+
+Usage:
+  battreport [logfile] [--csv]
+    logfile  path to serialtap log (default: tmp/serial.log)
+    --csv    emit comma-separated rows instead of a table
+"""
+
+import re
+import sys
+from datetime import datetime
+
+LEFT_RE = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*vddh_sample_fetch: ADC raw \d+ ~ (\d+) mV => (\d+)%")
+RIGHT_RE = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*Battery level: (\d+)")
+
+
+def main():
+    args = [a for a in sys.argv[1:] if a != "--csv"]
+    csv = "--csv" in sys.argv[1:]
+    log_file = args[0] if args else "tmp/serial.log"
+
+    rows = []  # (time, left_pct, left_mv, right_pct)
+    try:
+        with open(log_file) as fh:
+            for line in fh:
+                m = LEFT_RE.search(line)
+                if m:
+                    rows.append((m.group(1), int(m.group(3)), int(m.group(2)), None))
+                    continue
+                m = RIGHT_RE.search(line)
+                if m:
+                    rows.append((m.group(1), None, None, int(m.group(2))))
+    except FileNotFoundError:
+        print(f"error: no such file: {log_file}", file=sys.stderr)
+        return 1
+
+    if not rows:
+        print("no battery readings found in", log_file)
+        return 0
+
+    last_left = last_left_mv = last_right = None
+    for t, lp, lmv, rp in rows:
+        if lp is not None:
+            last_left, last_left_mv = lp, lmv
+        if rp is not None:
+            last_right = rp
+
+    if csv:
+        for t, lp, lmv, rp in rows:
+            print(f"{t},{lp if lp is not None else ''},{lmv if lmv is not None else ''},{rp if rp is not None else ''}")
+        return 0
+
+    print(f"{'time':<20} {'left%':>5} {'mV':>6} {'right%':>6}")
+    for t, lp, lmv, rp in rows:
+        print(f"{t:<20} {lp if lp is not None else '-':>5} {lmv if lmv is not None else '-':>6} {rp if rp is not None else '-':>6}")
+
+    left_vals = [lp for _, lp, _, _ in rows if lp is not None]
+    right_vals = [rp for _, _, _, rp in rows if rp is not None]
+    if left_vals:
+        print(f"\nleft:  last {last_left}% ({last_left_mv} mV)  min {min(left_vals)}%  max {max(left_vals)}%  samples {len(left_vals)}")
+    if right_vals:
+        print(f"right: last {last_right}%  min {min(right_vals)}%  max {max(right_vals)}%  samples {len(right_vals)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

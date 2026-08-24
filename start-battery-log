@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec nohup "$(dirname "$0")/serialtap" >"$(dirname "$0")/tmp/serialtap.out" 2>&1 &

@@ -1,0 +1,82 @@
+#!/bin/bash
+# batcheck - log Corne left (central) and right (peripheral) battery levels.
+#
+# Reads both GATT Battery Level characteristics from the keyboard over BLE via
+# blew. Requires the keyboard to be advertising (i.e. NOT connected to the host
+# as an HID keyboard), and blew built/available.
+#
+# Usage:
+#   batcheck                  print both battery levels once
+#   batcheck --watch          print both levels every minute until Ctrl-C
+#   batcheck --watch 300      every 5 minutes
+#   batcheck --device <id>    use a specific BLE device id (default: auto by name Corne)
+set -euo pipefail
+
+BLEW="${BLEW:-/var/folders/wd/0h5z46jx24l35yzd4ld3f5pw0000gp/T/opencode/blew/.build/release/blew}"
+DEVICE="${BATDEV:-}"
+
+usage() {
+    echo "usage: $0 [--watch [seconds]] [--device <id>]" >&2
+    exit 2
+}
+
+watch_secs=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --watch) watch_secs=60; shift; [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]] && watch_secs="$1" && shift ;;
+        --device) DEVICE="$2"; shift 2 ;;
+        -h|--help) usage ;;
+        *) usage ;;
+    esac
+done
+
+if [[ ! -x "$BLEW" ]]; then
+    echo "error: blew not found at $BLEW (set BLEW to its path)" >&2
+    exit 1
+fi
+
+timestamp() { date "+%Y-%m-%d %H:%M:%S"; }
+
+find_device() {
+    if [[ -n "$DEVICE" ]]; then
+        echo "$DEVICE"
+        return 0
+    fi
+    "$BLEW" scan -t 8 2>/dev/null | awk '$2=="Corne" {print $1; exit}'
+}
+
+read_levels() {
+    local id="$1"
+    "$BLEW" exec -k "connect -i $id; gatt tree -r" 2>/dev/null |
+        grep -E "Service 180F|Battery Level" |
+        awk '/Service 180F/{svc++; next} /Battery Level/{print svc, $NF}'
+}
+
+device="$(find_device)"
+if [[ -z "$device" ]]; then
+    echo "error: Corne not advertising. Disconnect it from the host (Bluetooth settings), or pass --device <id>." >&2
+    exit 1
+fi
+
+print_once() {
+    local out
+    out="$(read_levels "$device")"
+    if [[ -z "$out" ]]; then
+        echo "$(timestamp) failed to read battery levels" >&2
+        return 1
+    fi
+    local left right
+    left="$(echo "$out" | awk 'NR==1 {print $2}')"
+    right="$(echo "$out" | awk 'NR==2 {print $2}')"
+    echo "$(timestamp) left=$left% right=${right:-n/a}%"
+}
+
+if [[ "$watch_secs" -eq 0 ]]; then
+    print_once
+else
+    echo "watching every ${watch_secs}s (Ctrl-C to stop)"
+    while true; do
+        print_once
+        sleep "$watch_secs"
+    done
+fi
