@@ -122,29 +122,6 @@ PERSONAL_LAYER(Blue,
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Example Hyper mapping usage:
 //  HYPER(1): Ctrl+Shift+Alt+GUI+1
 //  HYPER(2): Ctrl+Shift+Alt+GUI+2

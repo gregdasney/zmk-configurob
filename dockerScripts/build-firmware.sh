@@ -9,7 +9,7 @@ if [ -f "dockerScripts/pre-build.sh" ]; then
 fi;
 
 # Build Corne left
-west build -s zmk/app -d .build/corne_left -b nice_nano//zmk -- \
+west build -s zmk/app -d .build/corne_left -b nice_nano//zmk -S zmk-usb-logging -- \
     -DZMK_CONFIG=$(pwd)/config \
     -DSHIELD=corne_left
 
@@ -23,7 +23,7 @@ elif [ -f .build/corne_left/zephyr/zmk.bin ]; then
 fi;
 
 # Build Corne right
-west build -s zmk/app -d .build/corne_right -b nice_nano//zmk -- \
+west build -s zmk/app -d .build/corne_right -b nice_nano//zmk -S zmk-usb-logging -- \
     -DZMK_CONFIG=$(pwd)/config \
     -DSHIELD=corne_right
 
