@@ -18,6 +18,47 @@
 #include "hrm.dtsi"
 #include "base.keymap"
 
+// Tmux navigation macros - Z (held) activates the MACRO layer silently; it emits NOTHING
+// by itself. Only tapping one of these action keys while Z is held fires the macro below:
+// each one taps tmux's prefix (Ctrl-b), releases it, then taps the follow-up key in one
+// atomic sequence - Ctrl-b is never left "armed" on its own. Portable by construction:
+// these are real keystrokes, so they work in any terminal/OS tmux runs in (macOS, Linux,
+// SSH) using tmux's own default prefix+arrow (select-pane) and prefix+% (split-window -h)
+// bindings - no tmux.conf changes required.
+#define TMUX_PREFIX LC(B)
+
+ZMK_MACRO(tmux_pane_up,    bindings = <&kp TMUX_PREFIX &kp UP>;    wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_pane_left,  bindings = <&kp TMUX_PREFIX &kp LEFT>;  wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_pane_down,  bindings = <&kp TMUX_PREFIX &kp DOWN>;  wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_pane_right, bindings = <&kp TMUX_PREFIX &kp RIGHT>; wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_split,      bindings = <&kp TMUX_PREFIX &kp PRCNT>; wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_split_h,    bindings = <&kp TMUX_PREFIX &kp DQT>;   wait-ms = <0>; tap-ms = <5>;)
+
+// Pane resizing (IJKL - mirrors ESDF's inverted-T shape on the right hand)
+ZMK_MACRO(tmux_resize_up,    bindings = <&kp TMUX_PREFIX &kp LA(UP)>;    wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_resize_left,  bindings = <&kp TMUX_PREFIX &kp LA(LEFT)>;  wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_resize_down,  bindings = <&kp TMUX_PREFIX &kp LA(DOWN)>;  wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_resize_right, bindings = <&kp TMUX_PREFIX &kp LA(RIGHT)>; wait-ms = <0>; tap-ms = <5>;)
+
+// Window switching
+ZMK_MACRO(tmux_win_new,    bindings = <&kp TMUX_PREFIX &kp C>; wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_win_prev,   bindings = <&kp TMUX_PREFIX &kp P>; wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_win_next,   bindings = <&kp TMUX_PREFIX &kp N>; wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_win_picker, bindings = <&kp TMUX_PREFIX &kp W>; wait-ms = <0>; tap-ms = <5>;)
+
+// Session switching
+ZMK_MACRO(tmux_sess_prev,   bindings = <&kp TMUX_PREFIX &kp LPAR>;  wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_sess_next,   bindings = <&kp TMUX_PREFIX &kp RPAR>;  wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_sess_picker, bindings = <&kp TMUX_PREFIX &kp S>;     wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_sess_new,    bindings = <&kp TMUX_PREFIX &kp LS(S)>; wait-ms = <0>; tap-ms = <5>;)
+
+// Renaming
+ZMK_MACRO(tmux_win_rename,  bindings = <&kp TMUX_PREFIX &kp COMMA>;  wait-ms = <0>; tap-ms = <5>;)
+ZMK_MACRO(tmux_sess_rename, bindings = <&kp TMUX_PREFIX &kp DLLR>;   wait-ms = <0>; tap-ms = <5>;)
+
+// Kill pane (tmux's own y/n confirmation prompt still applies - not a one-shot destructive action)
+ZMK_MACRO(tmux_kill_pane, bindings = <&kp TMUX_PREFIX &kp X>; wait-ms = <0>; tap-ms = <5>;)
+
 // Personal layer macro - same signature as urob's ZMK_BASE_LAYER
 #define PERSONAL_LAYER(name, LT, RT, LM, RM, LB, RB, LH, RH) \
     ZMK_LAYER(name, LT RT LM RM LB RB LH RH)
@@ -83,11 +124,11 @@ PERSONAL_LAYER(Sym,
 
 PERSONAL_LAYER(Macro,
 // ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮ ╭─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬─────────────╮
-          &kp M       XXX           &kp F19       &kp F20       HYPER(A)        XXX      ,     XXX           XXX           XXX           XXX           XXX           XXX             ,
+          &kp M       XXX           &kp F20       &tmux_pane_up &tmux_split     &tmux_split_h      ,     &tmux_sess_new &tmux_sess_prev &tmux_resize_up &tmux_sess_next &tmux_sess_picker XXX             ,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-         XXX          XXX           &kp F16       &kp F17       &kp F18        XXX      ,     HYPER(2)           XXX           XXX           XXX           XXX           XXX             ,
+         XXX          XXX           &tmux_pane_left &tmux_pane_down &tmux_pane_right XXX      ,     HYPER(2)      &tmux_resize_left &tmux_resize_down &tmux_resize_right &tmux_win_rename &tmux_sess_rename             ,
 // ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┼─────────────┼─────────────┤
-         XXX           XXX          &kp F13       &kp F14       &kp F15        XXX      ,     HYPER(Q)           XXX           XXX           XXX           XXX           XXX             ,
+         XXX           XXX          &kp F13       &kp F14       &kp F15        XXX      ,     HYPER(Q)      &tmux_win_new &tmux_win_prev &tmux_win_next &tmux_win_picker &tmux_kill_pane             ,
 // ╰─────────────┼─────────────┴─────────────┼─────────────┼─────────────┼─────────────┤ ├─────────────┼─────────────┼─────────────┼─────────────┴─────────────┴─────────────╯
                                                   XXX           XXX            XXX      ,     XXX           XXX           XXX
 //                                           ╰─────────────┴─────────────┴─────────────╯ ╰─────────────┴─────────────┴─────────────╯
