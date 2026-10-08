@@ -3,24 +3,19 @@
 
 #include "tp_split.dtsi"
 
-// PS/2 wiring on the right half (nice!nano pinout, all pins free on corne_right):
-//   SCL = D16 (P0.10), SDA = D10 (P0.09), RST = D9 (P1.06)
-#define MOUSE_PS2_PIN_SCL_PRO_MICRO <&pro_micro 16 GPIO_ACTIVE_HIGH>
-#define MOUSE_PS2_PIN_SDA_PRO_MICRO <&pro_micro 10 GPIO_ACTIVE_HIGH>
-#define MOUSE_PS2_PIN_RST_PRO_MICRO <&pro_micro 9 GPIO_ACTIVE_HIGH>
-#define MOUSE_PS2_PIN_SDA_PINCTRL <NRF_PSEL(UART_RX, 0, 9)>
+// PS/2 wiring on the right half (nice!nano pinout):
+//   SDA = D1 (P0.06), SCL = D0 (P0.08), RST = D9 (P1.06)
+// D0/D1 are the nice!nano high-frequency pins, ideal for PS/2 timing.
+#define MOUSE_PS2_PIN_SCL_PRO_MICRO <&pro_micro 0 GPIO_ACTIVE_HIGH>   // D0  = P0.08
+#define MOUSE_PS2_PIN_SDA_PRO_MICRO <&pro_micro 1 GPIO_ACTIVE_HIGH>   // D1  = P0.06
+#define MOUSE_PS2_PIN_RST_PRO_MICRO <&pro_micro 9 GPIO_ACTIVE_HIGH>   // D9  = P1.06
+#define MOUSE_PS2_PIN_SDA_PINCTRL <NRF_PSEL(UART_RX, 0, 6)>           // SDA = P0.06
 #define MOUSE_PS2_UART_BAUD_RATE <14400>
 
 // UART TX/RX are multiplexed onto one PS/2 wire, so park the UART on
 // unexposed nRF52 pins (P0.27/P0.28) while bit-banging writes.
 #define MOUSE_PS2_PIN_UNEXPOSED_TX <NRF_PSEL(UART_TX, 0, 27)>
 #define MOUSE_PS2_PIN_UNEXPOSED_RX <NRF_PSEL(UART_RX, 0, 28)>
-
-// SCL/SDA are the nRF52840 NFC pins (P0.10/P0.09), which default to NFC mode.
-// Clear the NFC protection so they work as GPIOs; this is a one-time,
-// permanent UICR write and a no-op if the pins are already in GPIO mode.
-// (Preferred over the deprecated CONFIG_NFCT_PINS_AS_GPIOS.)
-&uicr { nfct-pins-as-gpios; };
 
 // PS/2 events must be serviced within 30-50us: raise gpiote to priority 0
 // and demote every other IRQ to 3 (BT controller prios come from driver Kconfig).
