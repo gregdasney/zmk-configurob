@@ -8,3 +8,4 @@ zmk
 draw/base.yaml
 draw/overview.yaml
 .DS_Store
+tmp/

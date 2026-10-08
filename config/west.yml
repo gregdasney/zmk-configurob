@@ -26,6 +26,8 @@ manifest:
       url-base: https://github.com/urob
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
+    - name: badjeff
+      url-base: https://github.com/badjeff
     - name: zephyrproject-rtos
       url-base: https://github.com/zephyrproject-rtos
 
@@ -54,6 +56,12 @@ manifest:
     - name: zmk-unicode
       path: modules/zmk/unicode
       revision: 1a6dbc797a46c4a61c3c71a7a9d013a5d5aee49e # main (4/19/2026)
+
+    # PS/2 mouse / TrackPoint driver (fork with split central-guard disabled)
+    - name: kb_zmk_ps2_mouse_trackpoint_driver
+      path: modules/kb_zmk_ps2_mouse_trackpoint_driver
+      remote: badjeff
+      revision: 7ab7846a95b233c3ada0e0605b972f36353e7bc4
 
     # Only source necessary Zephyr modules. Remove this entire section to restore
     # the default (needed for less common hardware).

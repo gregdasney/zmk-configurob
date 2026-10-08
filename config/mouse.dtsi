@@ -31,6 +31,12 @@
 };
 
 / {
+  // TrackPoint events arrive on the central half via zmk,input-split.
+  tpoint0_input_listener: tpoint0_input_listener {
+    compatible = "zmk,input-listener";
+    device = <&tpoint0_split>;
+  };
+
   zip_scroll_scaler: zip_scroll_scaler {
     compatible = "zmk,input-processor-scaler";
     #input-processor-cells = <2>;
